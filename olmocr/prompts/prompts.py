@@ -19,12 +19,12 @@ def build_openai_silver_data_prompt(base_text: str) -> str:
 
 @dataclass(frozen=True)
 class PageResponse:
-    primary_language: Optional[str]
-    is_rotation_valid: bool
-    rotation_correction: int
-    is_table: bool
-    is_diagram: bool
-    natural_text: Optional[str]
+    primary_language: Optional[str] = None
+    is_rotation_valid: bool = False
+    rotation_correction: int = 0
+    is_table: bool = False
+    is_diagram: bool = False
+    natural_text: Optional[str] = None
 
     def __post_init__(self):
         # Validate rotation_correction is one of the allowed values
