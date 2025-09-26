@@ -20,7 +20,7 @@ def build_openai_silver_data_prompt(base_text: str) -> str:
 @dataclass(frozen=True)
 class PageResponse:
     primary_language: Optional[str] = None
-    is_rotation_valid: bool = False
+    is_rotation_valid: bool = True
     rotation_correction: int = 0
     is_table: bool = False
     is_diagram: bool = False
