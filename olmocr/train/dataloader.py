@@ -4,7 +4,7 @@ import logging
 import re
 from abc import ABC, abstractmethod
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, MISSING
 from io import BytesIO
 from os import PathLike
 from pathlib import Path
@@ -191,6 +191,12 @@ class FrontMatterParser(PipelineStep):
         args = get_args(field_type)
         return origin is Union and type(None) in args and str in args
 
+    def _is_optional_type(self, field_type: Type) -> bool:
+        """Check if a type is Optional (Union with None)."""
+        origin = get_origin(field_type)
+        args = get_args(field_type)
+        return origin is Union and type(None) in args
+
     def _extract_front_matter_and_text(self, markdown_content: str) -> tuple[Dict[str, Any], str]:
         """Extract YAML front matter and text from markdown content."""
         if markdown_content.startswith("---\n"):
@@ -225,8 +231,24 @@ class FrontMatterParser(PipelineStep):
                 kwargs[field_name] = text if text else None
                 continue
 
+            # Skip missing fields if they are optional
             if field_name not in front_matter_dict:
-                raise ValueError(f"Missing required field '{field_name}' in front matter")
+                # Check if field is optional (has default value or is Optional type)
+                field_obj = next(f for f in fields(self.front_matter_class) if f.name == field_name)
+
+                # If field has a default value, use it
+                if field_obj.default != MISSING:
+                    kwargs[field_name] = field_obj.default
+                # If field has a default_factory, use it
+                elif field_obj.default_factory != MISSING:
+                    kwargs[field_name] = field_obj.default_factory()
+                # If field type is Optional, set to None
+                elif self._is_optional_str(field_type) or self._is_optional_type(field_type):
+                    kwargs[field_name] = None
+                else:
+                    # Only raise error for truly required fields
+                    raise ValueError(f"Missing required field '{field_name}' in front matter")
+                continue
 
             value = front_matter_dict[field_name]
 
